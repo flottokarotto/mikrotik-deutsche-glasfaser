@@ -1,0 +1,5 @@
+optimized-final.*
+backup.rsc
+dhcp-dns-script.txt
+*.backup
+.claude/
