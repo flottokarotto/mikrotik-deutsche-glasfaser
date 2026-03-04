@@ -1,0 +1,77 @@
+name: Test RouterOS Config
+
+on:
+  push:
+    paths:
+      - "*.rsc"
+      - ".github/workflows/test-rsc.yml"
+  pull_request:
+    paths:
+      - "*.rsc"
+      - ".github/workflows/test-rsc.yml"
+
+jobs:
+  test-import:
+    name: Import RSC in RouterOS CHR
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - mikrotik-deutsche-glasfaser.rsc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start RouterOS CHR
+        run: |
+          docker run -d --name routeros \
+            -p 2222:22 \
+            evilfreelancer/docker-routeros:latest
+          echo "Waiting for RouterOS to boot..."
+          for i in $(seq 1 60); do
+            if sshpass -p "" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
+              -p 2222 admin@127.0.0.1 "/system resource print" 2>/dev/null; then
+              echo "RouterOS is ready."
+              exit 0
+            fi
+            echo "  attempt $i/60..."
+            sleep 5
+          done
+          echo "RouterOS failed to start."
+          docker logs routeros
+          exit 1
+
+      - name: Import ${{ matrix.config }}
+        run: |
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -p 2222 admin@127.0.0.1\
+            "/import verbose=yes" < "${{ matrix.config }}" 2>&1 | tee import.log
+
+          # Check for errors in import output
+          if grep -qi "failure\|error\|syntax\|invalid" import.log; then
+            echo "::error::Import reported errors!"
+            cat import.log
+            exit 1
+          fi
+          echo "Import completed successfully."
+
+      - name: Verify DHCP server config
+        run: |
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -p 2222 admin@127.0.0.1 \
+            "/ip dhcp-server print detail" 2>&1 | tee dhcp.log
+
+          # Verify lease-script is present on defconf
+          if grep -q "lease-script" dhcp.log; then
+            echo "Lease script is configured."
+          else
+            echo "::warning::Lease script not found in DHCP server config."
+          fi
+
+      - name: Show running config
+        if: always()
+        run: |
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -p 2222 admin@127.0.0.1 \
+            "/export" 2>&1 | head -100
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f routeros

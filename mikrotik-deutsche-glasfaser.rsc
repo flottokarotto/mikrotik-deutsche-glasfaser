@@ -20,8 +20,7 @@
 #   - Gastnetz komplett isoliert
 #   - Gehaertete Services
 #
-# HINWEIS: DHCP-Lease-Script muss manuell via WinBox GUI eingefuegt werden
-#          (IP > DHCP Server > defconf > Script) - siehe Ende dieser Datei
+# DHCP-Lease-Script ist direkt im DHCP-Server integriert (DHCP-to-DNS)
 # ============================================================================
 
 # ---- Bridge + Gastnetz ----
@@ -48,11 +47,41 @@ add name=default-dhcp ranges=192.168.88.10-192.168.88.254
 add name=dhcp ranges=192.168.42.20-192.168.42.200
 add name=vpn ranges=192.168.89.2-192.168.89.255
 
-# ---- DHCP Server ----
-# HINWEIS: lease-script siehe Ende der Datei (manuell via WinBox einfuegen)
+# ---- DHCP Server (mit DHCP-to-DNS Lease Script) ----
 /ip dhcp-server
-add address-pool=dhcp interface=bridge lease-time=12h name=defconf
-add address-pool=default-dhcp comment="Gastnetz DHCP" interface=bridge-guest lease-time=1h name=dhcp-guest
+add address-pool=dhcp interface=bridge lease-script=":if (\$leaseBound = 1) do\
+    ={\
+    \n    :if ([:len \$\"lease-hostname\"] > 0) do={\
+    \n      :local fqdn (\$\"lease-hostname\" . \".lan\")\
+    \n      :do {/ip dns static remove [find name=\$fqdn comment=\"DHCP auto\"\
+    ]} on-error={}\
+    \n      /ip dns static add name=\$fqdn address=\$leaseActIP ttl=00:15:00 c\
+    omment=\"DHCP auto\"\
+    \n    }\
+    \n  } else={\
+    \n    :if ([:len \$\"lease-hostname\"] > 0) do={\
+    \n      :local fqdn (\$\"lease-hostname\" . \".lan\")\
+    \n      :do {/ip dns static remove [find name=\$fqdn comment=\"DHCP auto\"\
+    ]} on-error={}\
+    \n    }\
+    \n  }" lease-time=12h name=defconf
+add address-pool=default-dhcp comment="Gastnetz DHCP" interface=bridge-guest \
+    lease-script=":if (\$leaseBound = 1) do={\
+    \n    :if ([:len \$\"lease-hostname\"] > 0) do={\
+    \n      :local fqdn (\$\"lease-hostname\" . \".lan\")\
+    \n      :do {/ip dns static remove [find name=\$fqdn comment=\"DHCP auto\"\
+    ]} on-error={}\
+    \n      /ip dns static add name=\$fqdn address=\$leaseActIP ttl=00:15:00 c\
+    omment=\"DHCP auto\"\
+    \n    }\
+    \n  } else={\
+    \n    :if ([:len \$\"lease-hostname\"] > 0) do={\
+    \n      :local fqdn (\$\"lease-hostname\" . \".lan\")\
+    \n      :do {/ip dns static remove [find name=\$fqdn comment=\"DHCP auto\"\
+    ]} on-error={}\
+    \n    }\
+    \n  }\
+    \n" lease-time=1h name=dhcp-guest
 
 # ---- Queue Types + SQM (300 Mbit/s Anschluss) ----
 /queue type
@@ -242,23 +271,3 @@ add address=europe.pool.ntp.org
 set allowed-interface-list=LAN
 /tool mac-server mac-winbox
 set allowed-interface-list=LAN
-
-# ============================================================================
-# DHCP-to-DNS Lease Script
-# Manuell einfuegen: WinBox > IP > DHCP Server > defconf > Script
-# ============================================================================
-#
-# :if ($leaseBound = 1) do={
-#   :if ([:len $"lease-hostname"] > 0) do={
-#     :local fqdn ($"lease-hostname" . ".lan")
-#     :do {/ip dns static remove [find name=$fqdn comment="DHCP auto"]} on-error={}
-#     /ip dns static add name=$fqdn address=$leaseActIP ttl=00:15:00 comment="DHCP auto"
-#   }
-# } else={
-#   :if ([:len $"lease-hostname"] > 0) do={
-#     :local fqdn ($"lease-hostname" . ".lan")
-#     :do {/ip dns static remove [find name=$fqdn comment="DHCP auto"]} on-error={}
-#   }
-# }
-#
-# ============================================================================
