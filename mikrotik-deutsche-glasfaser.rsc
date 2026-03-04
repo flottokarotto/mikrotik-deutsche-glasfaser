@@ -167,7 +167,8 @@ add action=drop chain=input comment="defconf: drop all not coming from LAN" in-i
 # Forward Chain
 add action=accept chain=forward comment="defconf: accept in ipsec policy" ipsec-policy=in,ipsec
 add action=accept chain=forward comment="defconf: accept out ipsec policy" ipsec-policy=out,ipsec
-add action=fasttrack-connection chain=forward comment="defconf: fasttrack" connection-state=established,related
+# FastTrack deaktiviert - kollidiert mit SQM/fq-codel (Pakete wuerden Queues umgehen)
+# add action=fasttrack-connection chain=forward comment="defconf: fasttrack" connection-state=established,related
 add action=accept chain=forward comment="defconf: accept established,related,untracked" connection-state=established,related,untracked
 add action=drop chain=forward comment="defconf: drop invalid" connection-state=invalid
 add action=drop chain=forward comment="Gastnetz: LAN-Zugriff blockieren" dst-address=192.168.42.0/24 src-address=192.168.88.0/24
@@ -229,7 +230,8 @@ add action=accept chain=input comment="defconf: accept DHCPv6-Client prefix dele
 add chain=input comment="allow WireGuard IPv6" dst-port=443 protocol=udp
 add action=drop chain=input comment="defconf: drop everything else not coming from LAN" in-interface-list=!LAN
 # Forward Chain
-add action=fasttrack-connection chain=forward comment="defconf: fasttrack6" connection-state=established,related
+# FastTrack IPv6 deaktiviert - kollidiert mit SQM/fq-codel
+# add action=fasttrack-connection chain=forward comment="defconf: fasttrack6" connection-state=established,related
 add action=accept chain=forward comment="defconf: accept established,related,untracked" connection-state=established,related,untracked
 add action=drop chain=forward comment="defconf: drop invalid" connection-state=invalid
 add action=drop chain=forward comment="defconf: drop packets with bad src ipv6" src-address-list=bad_ipv6
