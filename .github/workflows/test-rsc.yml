@@ -53,6 +53,28 @@ jobs:
           docker logs routeros
           exit 1
 
+      - name: Reset RouterOS to blank config
+        run: |
+          # Remove default config so our RSC can create everything from scratch
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -p 2222 admin@127.0.0.1 \
+            "/system reset-configuration no-defaults=yes skip-backup=yes"
+          echo "Waiting for RouterOS to reboot after reset..."
+          sleep 10
+          for i in $(seq 1 60); do
+            if sshpass -p "" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
+              -o UserKnownHostsFile=/dev/null -p 2222 admin@127.0.0.1 \
+              "/system resource print" 2>/dev/null; then
+              echo "RouterOS is ready after reset."
+              exit 0
+            fi
+            echo "  attempt $i/60..."
+            sleep 5
+          done
+          echo "RouterOS failed to come back after reset."
+          docker logs routeros
+          exit 1
+
       - name: Prepare RSC for CHR import
         run: |
           # Replace placeholder MACs with valid dummy MACs for CI
