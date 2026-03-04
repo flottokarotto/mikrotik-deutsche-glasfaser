@@ -140,15 +140,15 @@ add allow-reconfigure=yes default-route-tables=main interface=ether1
 add address=192.168.42.0/24 dns-server=192.168.42.1 gateway=192.168.42.1 netmask=24 ntp-server=192.168.42.1
 add address=192.168.88.0/24 comment=Gastnetz dns-server=192.168.88.1 gateway=192.168.88.1 netmask=24 ntp-server=192.168.42.1
 
-# ---- DNS-over-HTTPS (Cloudflare) ----
+# ---- DNS-over-HTTPS (Cloudflare Security / Malware-Filter) ----
 /ip dns
-set allow-remote-requests=yes cache-max-ttl=1d cache-size=4096KiB mdns-repeat-ifaces=bridge servers=9.9.9.9,149.112.112.112 use-doh-server=https://1.1.1.1/dns-query verify-doh-cert=yes
+set allow-remote-requests=yes cache-max-ttl=1d cache-size=4096KiB mdns-repeat-ifaces=bridge servers=9.9.9.9,149.112.112.112 use-doh-server=https://security.cloudflare-dns.com/dns-query verify-doh-cert=yes
 /ip dns static
 add address=192.168.42.1 comment=defconf name=router.lan type=A
 add address=9.9.9.9 comment="DoH Bootstrap Quad9" name=dns.quad9.net type=A
 add address=149.112.112.112 comment="DoH Bootstrap Quad9 secondary" name=dns.quad9.net type=A
-add address=1.1.1.1 comment="DoH Bootstrap Cloudflare" name=cloudflare-dns.com type=A
-add address=1.0.0.1 comment="DoH Bootstrap Cloudflare secondary" name=cloudflare-dns.com type=A
+add address=1.1.1.2 comment="DoH Bootstrap Cloudflare Security" name=security.cloudflare-dns.com type=A
+add address=1.0.0.2 comment="DoH Bootstrap Cloudflare Security secondary" name=security.cloudflare-dns.com type=A
 add address=192.168.88.1 comment="Gastnetz Router-Zugang" name=router.guest type=A
 
 # ---- IPv4 Firewall Filter ----
