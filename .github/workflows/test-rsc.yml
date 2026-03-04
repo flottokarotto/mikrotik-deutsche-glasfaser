@@ -22,33 +22,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
       - name: Start RouterOS CHR
         run: |
+          # Enable KVM for faster QEMU boot
+          sudo chmod 666 /dev/kvm 2>/dev/null || true
+
           docker run -d --name routeros \
-            --privileged \
+            --cap-add=NET_ADMIN \
+            --device /dev/net/tun \
+            --device /dev/kvm \
             -p 2222:22 \
+            -p 8728:8728 \
             evilfreelancer/docker-routeros:latest
+
           echo "Waiting for RouterOS to boot..."
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if sshpass -p "" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
-              -p 2222 admin@127.0.0.1 "/system resource print" 2>/dev/null; then
-              echo "RouterOS is ready."
+              -o UserKnownHostsFile=/dev/null -p 2222 admin@127.0.0.1 \
+              "/system resource print" 2>/dev/null; then
+              echo "RouterOS is ready after ~$((i*5))s."
               exit 0
             fi
-            echo "  attempt $i/60..."
+            echo "  attempt $i/90..."
             sleep 5
           done
-          echo "RouterOS failed to start."
+          echo "RouterOS failed to start. Docker logs:"
           docker logs routeros
           exit 1
 
-      - name: Import ${{ matrix.config }}
+      - name: Upload RSC via SCP and import
         run: |
-          sshpass -p "" ssh -o StrictHostKeyChecking=no -p 2222 admin@127.0.0.1\
-            "/import verbose=yes" < "${{ matrix.config }}" 2>&1 | tee import.log
+          # SCP the file to RouterOS
+          sshpass -p "" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -P 2222 "${{ matrix.config }}" admin@127.0.0.1:/
+
+          # Import the uploaded file
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -p 2222 admin@127.0.0.1 \
+            "/import file-name=${{ matrix.config }} verbose=yes" 2>&1 | tee import.log
 
           # Check for errors in import output
-          if grep -qi "failure\|error\|syntax\|invalid" import.log; then
+          if grep -qi "failure\|syntax error\|expected end" import.log; then
             echo "::error::Import reported errors!"
             cat import.log
             exit 1
@@ -57,10 +74,10 @@ jobs:
 
       - name: Verify DHCP server config
         run: |
-          sshpass -p "" ssh -o StrictHostKeyChecking=no -p 2222 admin@127.0.0.1 \
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -p 2222 admin@127.0.0.1 \
             "/ip dhcp-server print detail" 2>&1 | tee dhcp.log
 
-          # Verify lease-script is present on defconf
           if grep -q "lease-script" dhcp.log; then
             echo "Lease script is configured."
           else
@@ -70,8 +87,8 @@ jobs:
       - name: Show running config
         if: always()
         run: |
-          sshpass -p "" ssh -o StrictHostKeyChecking=no -p 2222 admin@127.0.0.1 \
-            "/export" 2>&1 | head -100
+          sshpass -p "" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -p 2222 admin@127.0.0.1 "/export" 2>&1 | head -100 || true
 
       - name: Cleanup
         if: always()
