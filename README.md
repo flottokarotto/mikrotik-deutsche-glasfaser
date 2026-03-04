@@ -32,7 +32,7 @@ Deutsche Glasfaser ONT
 | **mDNS** | AirPlay, Chromecast, Drucker-Discovery im LAN |
 | **UPnP** | Fuer Gaming und Streaming |
 | **NTP Server** | Zeitserver fuer alle LAN-Geraete |
-| **DHCP-to-DNS** | Geraete automatisch als `<hostname>.lan` erreichbar |
+| **DHCP-to-DNS** | Geraete automatisch als `<hostname>.lan` erreichbar (Lease-Script direkt im DHCP-Server) |
 | **IPv6** | SLAAC + ULA-Adressen + NAT Masquerade (DG liefert kein Prefix Delegation) |
 | **VPN** | MikroTik Back-to-Home VPN (WireGuard, umgeht CGNAT) |
 | **DynDNS** | MikroTik Cloud (ip cloud) |
@@ -66,28 +66,7 @@ Deutsche Glasfaser ONT
 /import file-name=mikrotik-deutsche-glasfaser.rsc
 ```
 
-### 4. DHCP-DNS Lease-Script einfuegen
-
-Das Script kann nicht per `/import` eingespielt werden (Escaping-Problem in RouterOS). Manuell einfuegen:
-
-**WinBox > IP > DHCP Server > Doppelklick `defconf` > Script-Feld:**
-
-```routeros
-:if ($leaseBound = 1) do={
-  :if ([:len $"lease-hostname"] > 0) do={
-    :local fqdn ($"lease-hostname" . ".lan")
-    :do {/ip dns static remove [find name=$fqdn comment="DHCP auto"]} on-error={}
-    /ip dns static add name=$fqdn address=$leaseActIP ttl=00:15:00 comment="DHCP auto"
-  }
-} else={
-  :if ([:len $"lease-hostname"] > 0) do={
-    :local fqdn ($"lease-hostname" . ".lan")
-    :do {/ip dns static remove [find name=$fqdn comment="DHCP auto"]} on-error={}
-  }
-}
-```
-
-### 5. CA-Zertifikate importieren (fuer DoH)
+### 4. CA-Zertifikate importieren (fuer DoH)
 
 ```routeros
 # Device-Mode: fetch muss aktiviert sein
@@ -100,7 +79,7 @@ Das Script kann nicht per `/import` eingespielt werden (Escaping-Problem in Rout
 /certificate import file-name=cacert.pem passphrase=""
 ```
 
-### 6. Back-to-Home VPN aktivieren
+### 5. Back-to-Home VPN aktivieren
 
 ```routeros
 /ip cloud set back-to-home-vpn=enabled ddns-enabled=yes
@@ -108,7 +87,7 @@ Das Script kann nicht per `/import` eingespielt werden (Escaping-Problem in Rout
 
 QR-Code fuer die WireGuard App wird automatisch generiert.
 
-### 7. Pruefen
+### 6. Pruefen
 
 ```routeros
 :put [:resolve google.com]

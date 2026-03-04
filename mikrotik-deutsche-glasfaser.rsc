@@ -55,8 +55,8 @@ add address-pool=dhcp interface=bridge lease-script=":if (\$leaseBound = 1) do\
     \n      :local fqdn (\$\"lease-hostname\" . \".lan\")\
     \n      :do {/ip dns static remove [find name=\$fqdn comment=\"DHCP auto\"\
     ]} on-error={}\
-    \n      /ip dns static add name=\$fqdn address=\$leaseActIP ttl=00:15:00 c\
-    omment=\"DHCP auto\"\
+    \n      :do {/ip dns static add name=\$fqdn address=\$leaseActIP ttl=00:15:00 c\
+    omment=\"DHCP auto\"} on-error={}\
     \n    }\
     \n  } else={\
     \n    :if ([:len \$\"lease-hostname\"] > 0) do={\
@@ -71,8 +71,8 @@ add address-pool=default-dhcp comment="Gastnetz DHCP" interface=bridge-guest \
     \n      :local fqdn (\$\"lease-hostname\" . \".lan\")\
     \n      :do {/ip dns static remove [find name=\$fqdn comment=\"DHCP auto\"\
     ]} on-error={}\
-    \n      /ip dns static add name=\$fqdn address=\$leaseActIP ttl=00:15:00 c\
-    omment=\"DHCP auto\"\
+    \n      :do {/ip dns static add name=\$fqdn address=\$leaseActIP ttl=00:15:00 c\
+    omment=\"DHCP auto\"} on-error={}\
     \n    }\
     \n  } else={\
     \n    :if ([:len \$\"lease-hostname\"] > 0) do={\

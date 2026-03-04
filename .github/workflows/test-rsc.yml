@@ -36,7 +36,7 @@ jobs:
             --device /dev/kvm \
             -p 2222:22 \
             -p 8728:8728 \
-            evilfreelancer/docker-routeros:latest
+            evilfreelancer/docker-routeros:7.17.2
 
           echo "Waiting for RouterOS to boot..."
           for i in $(seq 1 90); do
@@ -81,7 +81,8 @@ jobs:
           if grep -q "lease-script" dhcp.log; then
             echo "Lease script is configured."
           else
-            echo "::warning::Lease script not found in DHCP server config."
+            echo "::error::Lease script not found in DHCP server config."
+            exit 1
           fi
 
       - name: Show running config
