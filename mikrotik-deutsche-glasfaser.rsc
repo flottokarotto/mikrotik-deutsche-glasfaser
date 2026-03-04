@@ -268,6 +268,18 @@ set broadcast=yes enabled=yes
 add address=de.pool.ntp.org
 add address=europe.pool.ntp.org
 
+# ---- Auto-Update (long-term channel, nur Security/Bugfixes) ----
+/system package update
+set channel=long-term
+/system scheduler
+add name=auto-update interval=1d start-time=04:00:00 on-event=\
+    "/system package update check-for-updates\r\
+    \n:delay 60s\r\
+    \n:if ([/system package update get status] = \"New version is available\") do={\r\
+    \n  /log warning \"RouterOS auto-update: neue Version gefunden, installiere...\"\r\
+    \n  /system package update install\r\
+    \n}"
+
 # ---- MAC Server ----
 /tool mac-server
 set allowed-interface-list=LAN
