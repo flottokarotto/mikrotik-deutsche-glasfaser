@@ -22,9 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create /dev/net/tun
+        run: |
+          sudo mkdir -p /dev/net
+          sudo mknod /dev/net/tun c 10 200
+          sudo chmod 666 /dev/net/tun
+
       - name: Start RouterOS CHR
         run: |
           docker run -d --name routeros \
+            --privileged \
+            --device /dev/net/tun \
             -p 2222:22 \
             evilfreelancer/docker-routeros:latest
           echo "Waiting for RouterOS to boot..."
