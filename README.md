@@ -36,6 +36,7 @@ Deutsche Glasfaser ONT
 | **IPv6** | SLAAC + ULA-Adressen + NAT Masquerade (DG liefert kein Prefix Delegation) |
 | **VPN** | MikroTik Back-to-Home VPN (WireGuard, umgeht CGNAT) |
 | **DynDNS** | MikroTik Cloud (ip cloud) |
+| **Auto-Update** | Long-term Channel, taeglich 4 Uhr (nur Security/Bugfixes) |
 | **Sicherheit** | Telnet/FTP/API deaktiviert, SSH+Winbox nur aus LAN/VPN |
 
 ## Deutsche Glasfaser Besonderheiten
